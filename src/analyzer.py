@@ -96,7 +96,7 @@ class VideoMisuseAnalyzer:
         Returns:
             Dictionary containing analysis results and statistics
         """
-        self.logger.info("=== 動画無断使用分析開始 ===")
+        self.logger.info("=== Video misuse analysis started ===")
 
         # Load and process data
         self._load_parsed_data()
@@ -106,21 +106,21 @@ class VideoMisuseAnalyzer:
         # Generate outputs
         results = self._generate_all_outputs()
 
-        self.logger.info("=== 動画無断使用分析完了 ===")
+        self.logger.info("=== Video misuse analysis finished ===")
         return results
 
     def _load_parsed_data(self) -> None:
         """Load parsed tweet data from JSON files."""
         if not self.input_dir.exists():
-            self.logger.error(f"入力ディレクトリが見つかりません: {self.input_dir}")
+            self.logger.error(f"Input directory not found: {self.input_dir}")
             return
 
         json_files = list(self.input_dir.glob("*_extracted.json"))
         if not json_files:
-            self.logger.error("抽出済みJSONファイルが見つかりません")
+            self.logger.error("No extracted JSON files found")
             return
 
-        self.logger.info(f"分析対象ファイル数: {len(json_files)}")
+        self.logger.info(f"Files to analyze: {len(json_files)}")
 
         total_tweets = 0
         video_tweets = 0
@@ -144,20 +144,20 @@ class VideoMisuseAnalyzer:
 
             except Exception as e:
                 self.logger.error(
-                    f"ファイル読み込みエラー {sanitize_log_message(file_path.name)}: {sanitize_log_message(str(e))}"
+                    f"File read error {sanitize_log_message(file_path.name)}: {sanitize_log_message(str(e))}"
                 )
 
-        self.logger.info(f"総ツイート数: {total_tweets:,}")
-        self.logger.info(f"動画付きツイート数: {video_tweets:,}")
-        self.logger.info(f"動画無断使用検出数: {misuse_tweets:,}")
+        self.logger.info(f"Total tweets: {total_tweets:,}")
+        self.logger.info(f"Tweets with video: {video_tweets:,}")
+        self.logger.info(f"Video misuse detected: {misuse_tweets:,}")
 
         if video_tweets > 0:
             misuse_rate = (misuse_tweets / video_tweets) * 100
-            self.logger.info(f"無断使用率: {misuse_rate:.2f}%")
+            self.logger.info(f"Misuse rate: {misuse_rate:.2f}%")
 
     def _analyze_user_behaviors(self) -> None:
         """Analyze user behavior patterns for video misuse."""
-        self.logger.info("ユーザー行動分析を開始")
+        self.logger.info("Starting user behavior analysis")
 
         for tweet in self.video_misuse_data:
             screen_name = tweet.get("screen_name", "").lower()
@@ -241,11 +241,11 @@ class VideoMisuseAnalyzer:
                             "total_violations"
                         ]  # All in one day
 
-        self.logger.info(f"分析完了: {len(self.user_profiles)} ユーザーを分析")
+        self.logger.info(f"Analysis finished: {len(self.user_profiles)} users analyzed")
 
     def _analyze_creator_victims(self) -> None:
         """Analyze which creators are most victimized."""
-        self.logger.info("被害クリエイター分析を開始")
+        self.logger.info("Starting victim creator analysis")
 
         for tweet in self.video_misuse_data:
             creator = tweet.get("video_creator", "").strip()
@@ -272,7 +272,7 @@ class VideoMisuseAnalyzer:
                 )
 
         self.logger.info(
-            f"被害分析完了: {len(self.creator_victims)} クリエイターを分析"
+            f"Victim analysis finished: {len(self.creator_victims)} creators analyzed"
         )
 
     def _generate_all_outputs(self) -> Dict[str, Any]:
@@ -346,7 +346,7 @@ class VideoMisuseAnalyzer:
                     }
                     writer.writerow(row)
 
-        self.logger.info(f"ユーザー違反リスト出力完了: {output_file}")
+        self.logger.info(f"Wrote user violation list: {output_file}")
         return output_file
 
     def _output_violation_details_csv(self, timestamp: str) -> Path:
@@ -390,7 +390,7 @@ class VideoMisuseAnalyzer:
                     }
                     writer.writerow(row)
 
-        self.logger.info(f"詳細違反リスト出力完了: {output_file}")
+        self.logger.info(f"Wrote violation details: {output_file}")
         return output_file
 
     def _output_user_rankings_json(self, timestamp: str) -> Path:
@@ -479,7 +479,7 @@ class VideoMisuseAnalyzer:
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(analysis_data, f, ensure_ascii=False, indent=2)
 
-        self.logger.info(f"ユーザーランキング出力完了: {output_file}")
+        self.logger.info(f"Wrote user rankings: {output_file}")
         return output_file
 
     def _output_summary_statistics_json(self, timestamp: str) -> Path:
@@ -551,7 +551,7 @@ class VideoMisuseAnalyzer:
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(summary, f, ensure_ascii=False, indent=2)
 
-        self.logger.info(f"統計サマリー出力完了: {output_file}")
+        self.logger.info(f"Wrote summary statistics: {output_file}")
         return output_file
 
     def _output_creator_victims_csv(self, timestamp: str) -> Path:
@@ -586,7 +586,7 @@ class VideoMisuseAnalyzer:
                 }
                 writer.writerow(row)
 
-        self.logger.info(f"被害クリエイターランキング出力完了: {output_file}")
+        self.logger.info(f"Wrote victim creator ranking: {output_file}")
         return output_file
 
     def _analyze_user_patterns(self) -> Dict[str, Any]:

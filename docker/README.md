@@ -1,184 +1,88 @@
 # Docker Usage Guide
 
-このドキュメントでは、TwitterHTMLパーサーをDockerで実行する方法を説明します。
+How to run the extractor with Docker. The image (`Dockerfile`) is based on `python:3.15-slim`, runs as the non-root user `twitter-parser` (UID 1000), and sets `PYTHONPATH=/app`.
 
-## クイックスタート
-
-### 1. データの準備
+## Quick start
 
 ```bash
-# データディレクトリを作成
+# Create the data directories and add your Twitter export JSON files
 mkdir -p data output reports
-
-# TwitterエクスポートJSONファイルをdataディレクトリに配置
 cp /path/to/tweets-*.json data/
-```
 
-### 2. Dockerビルド
-
-```bash
-# イメージをビルド
-docker build -t twitter-html-parser .
-
-# または docker compose を使用
+# Build the image
 docker compose build
+
+# Extract data
+docker compose run --rm twitter-parser \
+  python scripts/extract_tweets.py \
+  --input /app/data \
+  --output /app/output \
+  --reports /app/reports
 ```
 
-### 3. 実行
+Without Compose:
 
 ```bash
-# 基本的な実行
+docker build -t twitter-html-parser .
 docker run --rm \
   -v $(pwd)/data:/app/data:ro \
   -v $(pwd)/output:/app/output \
   -v $(pwd)/reports:/app/reports \
   twitter-html-parser \
-  python scripts/extract_tweets.py --input-dir /app/data --output-dir /app/output
-
-# docker compose を使用
-docker compose run --rm twitter-parser \
-  python scripts/extract_tweets.py --input-dir /app/data --output-dir /app/output
+  python scripts/extract_tweets.py --input /app/data --output /app/output --reports /app/reports
 ```
 
-## 使用例
+The CLI options are `--input` (alias `--input-dir`), `--output`, `--reports`, `--consolidated`, `--analyze-misuse`, `--sample`, `--verbose` and `--quiet`. There is no `--output-dir` or `--reports-dir` option. See the [main README](../README.md#command-line) for the full table.
 
-### データ抽出
-
-```bash
-# 基本的なデータ抽出
-docker compose run --rm twitter-parser \
-  python scripts/extract_tweets.py \
-  --input-dir /app/data \
-  --output-dir /app/output \
-  --reports-dir /app/reports
-
-# 統合ファイル作成有効
-docker compose run --rm twitter-parser \
-  python scripts/extract_tweets.py \
-  --input-dir /app/data \
-  --output-dir /app/output \
-  --consolidated
-```
-
-### 動画無断使用分析
+## Examples
 
 ```bash
-# 動画分析の実行
+# Also write one consolidated file with all tweets
 docker compose run --rm twitter-parser \
-  python examples/video_analysis.py
-```
+  python scripts/extract_tweets.py --input /app/data --output /app/output --consolidated
 
-### テスト実行
+# Run the video misuse analysis example (reads /app/data, writes inside the container)
+docker compose run --rm twitter-parser python examples/video_analysis.py
 
-```bash
-# テストコンテナでテスト実行
+# Run the tests
 docker compose run --rm twitter-parser-test
 
-# または直接テスト実行
-docker compose run --rm twitter-parser \
-  python -m pytest tests/ -v
-```
-
-### 開発モード
-
-```bash
-# 開発モードで起動（ソースコードがマウントされる）
+# Development shell with src/, scripts/, examples/ and tests/ mounted
 docker compose run --rm twitter-parser-dev
-
-# コンテナ内でインタラクティブに作業
-root@container:/app# python scripts/extract_tweets.py --help
-root@container:/app# python -m pytest tests/
-root@container:/app# python examples/basic_usage.py
 ```
 
-## カスタマイズ
-
-### 環境変数
-
-| 変数名 | 説明 | デフォルト |
-|--------|------|-----------|
-| `LOG_LEVEL` | ログレベル (DEBUG, INFO, WARNING, ERROR) | INFO |
-| `PYTHONUNBUFFERED` | Python出力のバッファリング無効化 | 1 |
-
-### ボリューム設定
-
-| ホストパス | コンテナパス | 説明 |
-|------------|--------------|------|
-| `./data` | `/app/data` | 入力JSONファイル（読み取り専用） |
-| `./output` | `/app/output` | 処理結果の出力先 |
-| `./reports` | `/app/reports` | レポートファイルの出力先 |
-
-### ポート設定
-
-現在のバージョンではWebサーバー機能はありませんが、将来的にAPI機能を追加する場合:
-
-```yaml
-services:
-  twitter-parser:
-    ports:
-      - "8000:8000"  # API サーバー用
-```
-
-## トラブルシューティング
-
-### 権限エラー
+`--analyze-misuse` fails inside the container unless `/app/video_misuse_analysis` already exists (see the [main README](../README.md#command-line)). Mounting a host directory there creates it and keeps the results:
 
 ```bash
-# 出力ディレクトリの権限を確認
-ls -la output/ reports/
-
-# 必要に応じて権限変更
-sudo chown -R $(id -u):$(id -g) output/ reports/
+mkdir -p video_misuse_analysis
+docker compose run --rm -v $(pwd)/video_misuse_analysis:/app/video_misuse_analysis twitter-parser \
+  python scripts/extract_tweets.py --input /app/data --output /app/output --analyze-misuse
 ```
 
-### メモリ不足
+Otherwise use `examples/video_analysis.py`.
 
-大量のJSONファイルを処理する場合:
+## Configuration
 
-```yaml
-services:
-  twitter-parser:
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-        reservations:
-          memory: 2G
-```
+Volumes defined in `compose.yaml` (`twitter-parser` service):
 
-### ログの確認
+| Host path | Container path | Description |
+|-----------|----------------|-------------|
+| `./data` | `/app/data` | Input JSON files (read-only) |
+| `./output` | `/app/output` | Extraction output |
+| `./reports` | `/app/reports` | Reports |
+
+`compose.yaml` also sets `PYTHONUNBUFFERED=1` and `LOG_LEVEL`, but the application does not read `LOG_LEVEL`. Use `--verbose` or `--quiet` to change the log level.
+
+## Troubleshooting
+
+If the output directories are not writable by the container user (UID 1000), fix their ownership on the host:
 
 ```bash
-# コンテナのログを確認
+sudo chown -R 1000:1000 output/ reports/
+```
+
+Show container logs:
+
+```bash
 docker compose logs twitter-parser
-
-# リアルタイムでログを表示
-docker compose logs -f twitter-parser
 ```
-
-## パフォーマンスチューニング
-
-### マルチステージビルド（本番用）
-
-```dockerfile
-# 本番用により軽量なイメージ
-FROM python:3.10-alpine AS builder
-# ... ビルド処理
-
-FROM python:3.10-alpine AS runtime
-# ... 実行用設定
-```
-
-### 並列処理
-
-```bash
-# 複数コンテナでの並列処理
-docker compose up --scale twitter-parser=3
-```
-
-## セキュリティ
-
-- 非rootユーザーでコンテナを実行
-- 読み取り専用でデータをマウント
-- 必要最小限のパッケージのみインストール
-- セキュリティアップデートの定期適用
