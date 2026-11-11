@@ -115,25 +115,25 @@ class TwitterDataExtractor:
         Returns:
             Dictionary containing processing statistics
         """
-        self.logger.info("=== Twitter データ抽出・JSON変換システム開始 ===")
+        self.logger.info("=== Twitter data extraction started ===")
         self.logger.info(
-            f"統合ファイル作成: {'有効' if self.create_consolidated else '無効'}"
+            f"Consolidated file: {'enabled' if self.create_consolidated else 'disabled'}"
         )
 
         # Validate input directory
         if not self.input_dir.exists():
-            self.logger.error(f"入力ディレクトリが見つかりません: {self.input_dir}")
+            self.logger.error(f"Input directory not found: {self.input_dir}")
             return self.stats
 
         # Find JSON files
         json_files = sorted(self.input_dir.glob("*.json"))
         if not json_files:
-            self.logger.error("JSONファイルが見つかりません")
+            self.logger.error("No JSON files found")
             return self.stats
 
         self.stats["total_files"] = len(json_files)
         self.stats["start_time"] = datetime.now()
-        self.logger.info(f"処理対象ファイル数: {len(json_files)}")
+        self.logger.info(f"Files to process: {len(json_files)}")
 
         # Process files
         all_tweets_data = []
@@ -168,7 +168,7 @@ class TwitterDataExtractor:
                         all_tweets_data.extend(file_data["tweets"])
 
             except Exception as e:
-                error_msg = f"ファイル処理エラー {sanitize_log_message(file_path.name)}: {sanitize_log_message(str(e))}"
+                error_msg = f"File processing error {sanitize_log_message(file_path.name)}: {sanitize_log_message(str(e))}"
                 self.logger.error(error_msg)
                 error_reports.append(
                     {
@@ -188,7 +188,7 @@ class TwitterDataExtractor:
         # Output final results
         self._output_final_results(all_tweets_data, file_summaries, error_reports)
 
-        self.logger.info("=== Twitter データ抽出・JSON変換システム完了 ===")
+        self.logger.info("=== Twitter data extraction finished ===")
         return self.stats
 
     def _process_single_file(self, file_path: Path) -> Optional[Dict[str, Any]]:
@@ -197,7 +197,7 @@ class TwitterDataExtractor:
             data = safe_json_load(str(file_path))
 
             if "data" not in data or not isinstance(data["data"], list):
-                self.logger.warning(f"不正なファイル構造: {file_path.name}")
+                self.logger.warning(f"Invalid file structure: {file_path.name}")
                 return None
 
             tweets = data["data"]
@@ -240,12 +240,12 @@ class TwitterDataExtractor:
         except ValueError as e:
             # Safe JSON loading errors
             self.logger.error(
-                f"JSON読み込みエラー {sanitize_log_message(file_path.name)}: {sanitize_log_message(str(e))}"
+                f"JSON load error {sanitize_log_message(file_path.name)}: {sanitize_log_message(str(e))}"
             )
             return None
         except Exception as e:
             self.logger.error(
-                f"ファイル読み込みエラー {sanitize_log_message(file_path.name)}: {sanitize_log_message(str(e))}"
+                f"File read error {sanitize_log_message(file_path.name)}: {sanitize_log_message(str(e))}"
             )
             return None
 
@@ -1052,16 +1052,16 @@ class TwitterDataExtractor:
                 files_per_second = current / elapsed_time
 
                 self.logger.info(
-                    f"処理進捗: {current+1}/{total} ({progress:.1f}%) | "
-                    f"経過時間: {format_time_duration(elapsed_time)} | "
-                    f"推定残り時間: {eta_str} | "
-                    f"処理速度: {files_per_second:.2f}ファイル/秒 | "
-                    f"累計ツイート数: {self.stats['total_tweets']} | "
-                    f"動画: {self.stats['videos_found']}件 | "
-                    f"無断使用: {self.stats['video_misuse_detected']}件"
+                    f"Progress: {current+1}/{total} ({progress:.1f}%) | "
+                    f"Elapsed: {format_time_duration(elapsed_time)} | "
+                    f"ETA: {eta_str} | "
+                    f"Speed: {files_per_second:.2f} files/s | "
+                    f"Total tweets: {self.stats['total_tweets']} | "
+                    f"Videos: {self.stats['videos_found']} | "
+                    f"Misuse: {self.stats['video_misuse_detected']}"
                 )
             else:
-                self.logger.info(f"処理開始: {current+1}/{total} ({progress:.1f}%)")
+                self.logger.info(f"Started: {current+1}/{total} ({progress:.1f}%)")
 
     def _update_video_stats(self, tweets: List[Dict]) -> None:
         """Update video-related statistics."""
@@ -1085,11 +1085,11 @@ class TwitterDataExtractor:
                 json.dump(tweets_data, f, ensure_ascii=False, indent=2)
 
             self.logger.debug(
-                f"個別ファイル出力完了: {output_file} ({len(tweets_data)}件)"
+                f"Wrote individual file: {output_file} ({len(tweets_data)} tweets)"
             )
 
         except Exception as e:
-            self.logger.error(f"個別ファイル出力エラー {file_path.name}: {e}")
+            self.logger.error(f"Individual file output error {file_path.name}: {e}")
 
     def _output_final_results(
         self,
@@ -1110,14 +1110,12 @@ class TwitterDataExtractor:
                     json.dump(all_tweets_data, f, ensure_ascii=False, indent=2)
 
                 self.logger.info(
-                    f"統合ファイル出力完了: {consolidated_file} ({len(all_tweets_data)}件)"
+                    f"Wrote consolidated file: {consolidated_file} ({len(all_tweets_data)} tweets)"
                 )
             elif self.create_consolidated:
-                self.logger.info(
-                    "統合ファイルの作成が要求されましたが、データがありません"
-                )
+                self.logger.info("Consolidated file requested but there is no data")
             else:
-                self.logger.info("統合ファイル作成はスキップされました")
+                self.logger.info("Consolidated file creation skipped")
 
             # Summary report
             self._output_summary_report(file_summaries)
@@ -1130,7 +1128,7 @@ class TwitterDataExtractor:
             self._output_statistics()
 
         except Exception as e:
-            self.logger.error(f"最終結果出力エラー: {e}")
+            self.logger.error(f"Final output error: {e}")
 
     def _output_summary_report(self, file_summaries: List[Dict]) -> None:
         """Output summary report."""
@@ -1151,10 +1149,10 @@ class TwitterDataExtractor:
             with open(report_file, "w", encoding="utf-8") as f:
                 json.dump(report_data, f, ensure_ascii=False, indent=2, default=str)
 
-            self.logger.info(f"サマリーレポート出力完了: {report_file}")
+            self.logger.info(f"Wrote summary report: {report_file}")
 
         except Exception as e:
-            self.logger.error(f"サマリーレポート出力エラー: {e}")
+            self.logger.error(f"Summary report output error: {e}")
 
     def _output_error_report(self, error_reports: List[Dict]) -> None:
         """Output error report."""
@@ -1167,10 +1165,10 @@ class TwitterDataExtractor:
             with open(error_file, "w", encoding="utf-8") as f:
                 json.dump(error_reports, f, ensure_ascii=False, indent=2)
 
-            self.logger.info(f"エラーレポート出力完了: {error_file}")
+            self.logger.info(f"Wrote error report: {error_file}")
 
         except Exception as e:
-            self.logger.error(f"エラーレポート出力エラー: {e}")
+            self.logger.error(f"Error report output error: {e}")
 
     def _output_statistics(self) -> None:
         """Output processing statistics."""
@@ -1191,7 +1189,7 @@ class TwitterDataExtractor:
             with open(stats_file, "w", encoding="utf-8") as f:
                 json.dump(stats_output, f, ensure_ascii=False, indent=2)
 
-            self.logger.info(f"統計情報出力完了: {stats_file}")
+            self.logger.info(f"Wrote statistics: {stats_file}")
 
         except Exception as e:
-            self.logger.error(f"統計情報出力エラー: {e}")
+            self.logger.error(f"Statistics output error: {e}")
