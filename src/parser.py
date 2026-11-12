@@ -1090,7 +1090,10 @@ class TwitterDataExtractor:
             )
 
         except Exception as e:
-            self.logger.error(f"Individual file output error {file_path.name}: {e}")
+            self.logger.error(
+                f"Individual file output error {sanitize_log_message(file_path.name)}: "
+                f"{sanitize_log_message(str(e))}"
+            )
 
     def _output_final_results(
         self,

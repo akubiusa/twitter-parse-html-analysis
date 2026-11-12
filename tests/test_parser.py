@@ -420,6 +420,27 @@ class TestTwitterDataExtractor(unittest.TestCase):
         self.assertEqual(stats["error_count"], 0)
         self.assertEqual(list(self.reports_dir.glob("error_report_*.json")), [])
 
+    def _make_extractor(self):
+        return TwitterDataExtractor(
+            input_dir=str(self.input_dir),
+            output_dir=str(self.output_dir),
+            reports_dir=str(self.reports_dir),
+        )
+
+    def test_individual_output_error_log_is_sanitized(self):
+        """File names and exceptions in the output-error log must be sanitized."""
+        extractor = self._make_extractor()
+        mock_logger = MagicMock()
+        with (
+            patch.object(extractor, "logger", mock_logger),
+            patch("src.parser.safe_file_path", side_effect=ValueError("boom\nFAKE")),
+        ):
+            extractor._output_individual_file([], Path("evil\nname.json"))
+
+        mock_logger.error.assert_called_once_with(
+            "Individual file output error evil name.json: boom FAKE"
+        )
+
     def test_oversized_multibyte_html_truncated_by_bytes(self):
         """Oversized multibyte HTML is truncated to at most 100,000 bytes."""
         extractor = TwitterDataExtractor(
